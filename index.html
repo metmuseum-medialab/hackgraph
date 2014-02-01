@@ -1,0 +1,339 @@
+<html>
+<head>
+	<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+<!--
+	<script type="text/javascript" src="js/springy/springy.js"></script>
+	<script type="text/javascript" src="js/springy/springyui.js"></script>
+-->
+	<script type="text/javascript" src="js/arbor-v0.92/lib/arbor.js"></script>
+	<script type="text/javascript" src="js/arbor-v0.92/lib/arbor-tween.js"></script>
+	<script type="text/javascript">
+var jQuery = $;
+var maxTitleLen = 20;
+
+$( document ).ready(function() {
+	var removeIslands = false;
+
+	var selectedNode = false;
+
+  var Renderer = function(canvas){
+    var canvas = $(canvas).get(0)
+    var ctx = canvas.getContext("2d");
+    var particleSystem
+
+    var that = {
+      init:function(system){
+        //
+        // the particle system will call the init function once, right before the
+        // first frame is to be drawn. it's a good place to set up the canvas and
+        // to pass the canvas size to the particle system
+        //
+        // save a reference to the particle system for use in the .redraw() loop
+        particleSystem = system
+
+        // inform the system of the screen dimensions so it can map coords for us.
+        // if the canvas is ever resized, screenSize should be called again with
+        // the new dimensions
+        particleSystem.screenSize(canvas.width, canvas.height) 
+        particleSystem.screenPadding(80) // leave an extra 80px of whitespace per side
+        
+        // set up some event handlers to allow for node-dragging
+        that.initMouseHandling()
+      },
+      
+      redraw:function(){
+        // 
+        // redraw will be called repeatedly during the run whenever the node positions
+        // change. the new positions for the nodes can be accessed by looking at the
+        // .p attribute of a given node. however the p.x & p.y values are in the coordinates
+        // of the particle system rather than the screen. you can either map them to
+        // the screen yourself, or use the convenience iterators .eachNode (and .eachEdge)
+        // which allow you to step through the actual node objects but also pass an
+        // x,y point in the screen's coordinate system
+        // 
+        ctx.fillStyle = "white"
+        ctx.fillRect(0,0, canvas.width, canvas.height)
+        
+        particleSystem.eachEdge(function(edge, pt1, pt2){
+          // edge: {source:Node, target:Node, length:#, data:{}}
+          // pt1:  {x:#, y:#}  source position in screen coords
+          // pt2:  {x:#, y:#}  target position in screen coords
+
+          // draw a line from pt1 to pt2
+          ctx.strokeStyle = "rgba(0,0,0, .333)"
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(pt1.x, pt1.y)
+          ctx.lineTo(pt2.x, pt2.y)
+          ctx.stroke()
+        })
+
+        particleSystem.eachNode(function(node, pt){
+          // node: {mass:#, p:{x,y}, name:"", data:{}}
+          // pt:   {x:#, y:#}  node position in screen coords
+
+          // draw a rectangle centered at pt
+
+          if(removeIslands 
+          	&& ( node.data.pad.numLinks == 0) 
+          	&& ( node.data.pad.numInLinks == 0)){
+          	removeNode(node);
+          }
+
+          var w = 10
+//          ctx.fillStyle = (node.data.alone) ? "orange" : "black"
+ //         ctx.fillRect(pt.x-w/2, pt.y-w/2, w,w)
+
+
+	 		var fillStyle = node.data.fillStyle || "black";
+		    if(node == selectedNode){
+		    	fillStyle = "green";
+	 	    }
+
+
+	 	    fontSize = 12;
+	 	    if(node.data.pad.links){
+	 	    	fontSize += node.data.pad.numLinks;
+	 	    }
+
+	          ctx.font = fontSize+"px Helvetica"
+	            ctx.textAlign = "center"
+	            ctx.fillStyle = fillStyle;
+	            if (node.data.color=='none') ctx.fillStyle = '#333333'
+	            ctx.fillText(node.data.label||"", pt.x, pt.y+4)
+	         // console.log(node.data);
+	        })    			
+	      },
+      
+      initMouseHandling:function(){
+        // no-nonsense drag and drop (thanks springy.js)
+        var dragged = null;
+
+        // set up a handler object that will initially listen for mousedowns then
+        // for moves and mouseups while dragging
+        var handler = {
+          clicked:function(e){
+            var pos = $(canvas).offset();
+            _mouseP = arbor.Point(e.pageX-pos.left, e.pageY-pos.top)
+            dragged = particleSystem.nearest(_mouseP);
+
+            if (dragged && dragged.node !== null){
+              // while we're dragging, don't let physics move the node
+              dragged.node.fixed = true
+            }
+
+            $(canvas).bind('mousemove', handler.dragged)
+            $(window).bind('mouseup', handler.dropped)
+
+            nodeClicked(dragged.node, dragged.node.data.pad);
+
+
+
+
+            return false
+          },
+          dragged:function(e){
+            var pos = $(canvas).offset();
+            var s = arbor.Point(e.pageX-pos.left, e.pageY-pos.top)
+
+            if (dragged && dragged.node !== null){
+              var p = particleSystem.fromScreen(s)
+              dragged.node.p = p
+            }
+
+            return false
+          },
+          dropped:function(e){
+            if (dragged===null || dragged.node===undefined) return
+            if (dragged.node !== null) dragged.node.fixed = false
+            dragged.node.tempMass = 1000
+            dragged = null
+            $(canvas).unbind('mousemove', handler.dragged)
+            $(window).unbind('mouseup', handler.dropped)
+            _mouseP = null
+            return false
+          }
+        }
+        
+        // start listening
+        $(canvas).mousedown(handler.clicked);
+        $(window).keypress(function(evt){
+        	console.log("keypressed");
+        	console.log(evt);
+        	if(evt.charCode == 100 && selectedNode){ // 'd' is pressed
+        		removeNode(selectedNode);
+        		selectedNode == false;
+        	}
+			if(evt.charCode == 105){
+				removeIslands = true;
+			}        	
+
+
+        	return false;
+        });
+
+
+      },
+      
+    }
+    return that;
+  } ;
+
+    var sys = arbor.ParticleSystem(1000, 600, 0.5) // create the system with sensible repulsion/stiffness/friction
+    sys.parameters({gravity:true}) // use center-gravity to make the graph settle nicely (ymmv)
+    sys.renderer = Renderer("#my_canvas") // our newly created renderer will have its .init() method called shortly by sys...
+
+
+/*
+Edge options:
+weight
+directional : t/f
+color
+label
+font
+
+graph options:
+- nodeFont
+- edgeFont
+
+node options:
+- font
+- ondoubleclick : callback
+- label
+*/	
+
+
+	var spaceurl = "http://metmedia	lab.hackpad.com";
+
+	var nodes = {};
+	// make a new graph
+
+	// call server to get node list;
+
+	var textlessnodes = {};
+	$.ajax({
+  		url: "/?action=listpads",	
+  		success : function(data, status){
+  			$.each(data, function(index, pad){
+  				console.log("item");
+  				console.log(pad);
+  				console.log("adding item " + pad.title);
+
+  				var node = createNode(pad);
+
+  				nodes[pad.padid] = node;
+  			});
+  			$.each(data, function(index, item){
+  				var padid = item.padid;
+  				$.each(item.links, function(index2, link){
+  					var node1 = nodes[padid];
+  					var node2 = nodes[link.padid];
+  					if(node1 == null){
+  						console.log("no node found for source " + padid); 
+  		 			}
+  					if(node2 == null){
+  						console.log("no node found for dest " + link.padid); 
+  						console.log(link);
+  						if(textlessnodes[link.padid]){
+  							linkpad = textlessnodes[link.padid];
+  						}else{
+  							linkpad = {title: link.title, padid : link.padid, inLinks : {}};
+  							textlessnodes[link.padid] = linkpad;
+  						}
+  						linkpad.inLinks[padid] = padid;
+  						node2 = createNode(linkpad);
+  					}
+  					sys.addEdge(node1, node2, {color: 'red', weight: .5});
+  				});
+  			});
+
+
+  		},
+
+  		error : function(jqXHR, status, message){
+  			console.log("error ");
+  			console.log(status);
+  			console.log(message);
+  		}
+  	});
+
+
+
+	var removedNodes = {};
+	function removeNode(node){
+		removedNodes[node.data.pad.padid] = node;
+		$.each(node.data.pad.links, function(index, item){
+			var target = liveNodes[item.padid].data.pad;
+			if(target.inLinks[node.data.pad.padid]){
+				target.numInLinks--;
+				delete target.inLinks[node.data.pad.padid];
+			}
+		});
+		$.each(node.data.pad.inLinks, function(index, item){
+			var target = liveNodes[index].data.pad;
+			if(target.links[node.data.pad.padid]){
+				target.numlinks--;
+				delete target.links[node.data.pad.padid];
+			}
+		});
+
+        sys.pruneNode(node);
+
+		delete liveNodes[node.data.pad.padid];
+
+	}
+
+	function nodeClicked(node, pad){
+		selectedNode = node;
+
+//		window.open(spaceurl + "/" + pad.padid);
+
+	}
+
+
+	var liveNodes = {};
+	function createNode(pad){
+		var title = pad.title;
+  		if(title.length > maxTitleLen){
+  			title = title.substring(0,maxTitleLen) + "...";
+  		}
+  		var mass= 2 + pad.numLinks;
+
+  		var node = sys.addNode(pad.padid,
+  								{pad: pad,
+  									label: title, 
+	  								color: "green", 
+	  								fillStyle : "red",
+	  								ondoubleclick : function(evt){ nodeDblClicked(this, pad);},
+	  								onclick : function(evt){nodeClicked(this, pad);}
+  								});		
+  		liveNodes[pad.padid] = node;
+  		return node;
+	}
+	// make some nodes
+/*	var spruce = graph.newNode({label: 'Norway Spruce'});
+	var fir = graph.newNode({label: 'Sicilian Fir'});
+
+	// connect them with an edge
+	graph.newEdge(spruce, fir);
+	*/
+
+
+});
+
+	</script>
+</head>
+<body>
+	<div id="container">
+	<div id="canvasdiv">
+<canvas id="my_canvas" width="1200" height="800" />
+</div>
+	<div id="infodiv">
+		<div ="infotitle">
+		</div>
+	</div>
+</div>
+<script>
+</script>
+</body>
+</html>
