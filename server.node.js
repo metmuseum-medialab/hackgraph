@@ -23,7 +23,7 @@ $ = require("jquery")(jsdom.jsdom().createWindow());
 var secrets = require("./secrets").secrets();
 
 
-var site = "metmedialab";
+var site = secrets.hackpad_name;
 // hp_clientid and hp_secret
 
 var Hackpad = require("Hackpad");
@@ -211,8 +211,16 @@ function sendFile(path, query, res){
   if(path == "/"){
     path = "/index.html";
   }
+
   var extname = pathparser.extname(path);
   var contentType = 'text/html';
+  if(path.match(/secrets\.js/)){
+        res.writeHead(404, {'Content-Type': contentType});
+        //indexhtml = data;
+        res.end("I'm afraid I can't do that.");
+        return;
+  }
+
   switch (extname) {
     case '.js':
       contentType = 'text/javascript';

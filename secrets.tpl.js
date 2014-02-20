@@ -4,7 +4,8 @@ function secrets(){
 		hp_clientid : "",
 		hp_secret : "",
 		port : "",
-		prod_port : ""
+		prod_port : "",
+		hackpad_name : ""
 	};
 
 	return secrets;
