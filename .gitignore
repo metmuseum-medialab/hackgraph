@@ -1,6 +1,11 @@
 node_modules/
-js/arbor*
 secrets.js
+
+js/arbor-v0.92/demos*
+js/arbor-v0.92/src*
+js/arbor-v0.92/build*
+js/arbor-v0.92/docs*
+js/arbor-v0.92.zip
 
 out.txt
 
@@ -8,4 +13,3 @@ out.md.txt
 
 out.html.txt
 
-js/jquery-1.10.2.min.js
