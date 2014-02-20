@@ -39,95 +39,100 @@ var client = new Hackpad(secrets.hp_clientid, secrets.hp_secret, {site: site});
 var pads = {};
 
 
+updateList(startServer);
 
-client.list(function(error, list){
+function updateList(doneCallback){
 
-  var titleReg = /^# (.*)\n/;
-  // eg [Accessibility](/lWrAuo7a0Uf)
-  var linksReg = /\[([^\]]+)]\(\/([^\)]+)\)/g;
+  pads = {};
 
-  console.log("got list" + list.length);
- // console.log(list);
-  async.eachSeries(list, function(padid, callback){
-    console.log("\n\n+++value " + padid);
+  client.list(function(error, list){
 
-    client.export(padid, null, 'md', function(error, content){
+    var titleReg = /^# (.*)\n/;
+    // eg [Accessibility](/lWrAuo7a0Uf)
+    var linksReg = /\[([^\]]+)]\(\/([^\)]+)\)/g;
 
-      /*
-      console.log("\n\n\n\n*********************************************** content");
-      console.log("padid : " + padid);
-      console.log(error);
-      */
-      console.log(content);
+    console.log("got list" + list.length);
+   // console.log(list);
+    async.eachSeries(list, function(padid, callback){
+      console.log("\n\n+++value " + padid);
 
-      // parse content from md
-      var pad;
+      client.export(padid, null, 'md', function(error, content){
 
-      if(pads[padid]){
-        pad = pads[padid];        
-      }else{
-        pad  = {padid : padid, numLinks: 0, numInLinks: 0, links: {}, inLinks : {}};
+        /*
+        console.log("\n\n\n\n*********************************************** content");
+        console.log("padid : " + padid);
+        console.log(error);
+        */
+        console.log(content);
 
-      }
-      var matches = content.match(titleReg);
+        // parse content from md
+        var pad;
 
-      if(matches){
-        pad.title = matches[1];
-      }else{
-        console.log("page no title");
-        callback();
-        return;
-      }
+        if(pads[padid]){
+          pad = pads[padid];        
+        }else{
+          pad  = {padid : padid, numLinks: 0, numInLinks: 0, links: {}, inLinks : {}};
 
-      var linkMatches;
-      while (linkMatches = linksReg.exec(content)){
-        var linkTitle = linkMatches[1];
+        }
+        var matches = content.match(titleReg);
 
-        if(linkTitle.trim() != ""){
-          var linkPadID = linkMatches[2];
-
-          if(linkPadID != padid){ // no self-links!
-
-            linkPadID = linkPadID.split("#")[0];
-
-            var link = {title: linkTitle, padid : linkPadID};
-            if(!pad.links[linkPadID]){
-              pad.links[linkPadID] = link;
-              pad.numLinks++;
-            }
-
-            // need inboiund links as well.
-            var destPad= pads[linkPadID];
-            if(!destPad){
-              destPad = {padid : linkPadID, title: linkTitle, links: {} , inLinks: {} , numLinks: 0, numInLinks : 0};
-              pads[linkPadID] =  destPad;
-            }
-            if(!destPad.inLinks){
-              destPad.inLinks = {};
-            }
-            if(!destPad[padid]){
-              destPad.inLinks[padid] = padid;
-              destPad.numInLinks++;
-            }
-          }
+        if(matches){
+          pad.title = matches[1];
+        }else{
+          console.log("page no title");
+          callback();
+          return;
         }
 
-      }
-      console.log(pad);
+        var linkMatches;
+        while (linkMatches = linksReg.exec(content)){
+          var linkTitle = linkMatches[1];
+
+          if(linkTitle.trim() != ""){
+            var linkPadID = linkMatches[2];
+
+            if(linkPadID != padid){ // no self-links!
+
+              linkPadID = linkPadID.split("#")[0];
+
+              var link = {title: linkTitle, padid : linkPadID};
+              if(!pad.links[linkPadID]){
+                pad.links[linkPadID] = link;
+                pad.numLinks++;
+              }
+
+              // need inboiund links as well.
+              var destPad= pads[linkPadID];
+              if(!destPad){
+                destPad = {padid : linkPadID, title: linkTitle, links: {} , inLinks: {} , numLinks: 0, numInLinks : 0};
+                pads[linkPadID] =  destPad;
+              }
+              if(!destPad.inLinks){
+                destPad.inLinks = {};
+              }
+              if(!destPad[padid]){
+                destPad.inLinks[padid] = padid;
+                destPad.numInLinks++;
+              }
+            }
+          }
+
+        }
+        console.log(pad);
 
 
-      pads[padid] = pad; 
+        pads[padid] = pad; 
 
-      callback();
-    });
-  },
+        callback();
+      });
+    },
 
-  startServer
+    doneCallback
 
-  );
-});
+    );
+  });
 
-
+}
 
 
 
@@ -174,6 +179,12 @@ function parseRequest(req, res){
   }else if (query.action == "listpads"){
     listpads(query, res);
 
+  }else if (query.action == "updatelist"){
+    updateList(function (){ 
+      console.log("%%%%%%%%%%%%%%%%%%%%%%%%updating happened!");
+      res.writeHead(200, {'Content-Type': 'text/html'});
+      res.end("<html><body>list updated</body></html>");
+    });
   }else{
    res.writeHead(200, {'Content-Type': 'text/html'});
    res.end("<html><body><pre>not sure what to do</pre></body></html>");

@@ -1,0 +1,12 @@
+#infocontent { 
+	position: absolute;
+	top: 0px;
+	font-family: courier;
+	font-size: .5em;
+	color: black;
+}
+
+#my_canvas {
+	position : absolute;
+	top: 0px;
+}

@@ -1,5 +1,6 @@
 <html>
 <head>
+	<link rel="stylesheet" type="text/css" href="css/style.css" />
 	<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
 <!--
 	<script type="text/javascript" src="js/springy/springy.js"></script>
@@ -89,7 +90,9 @@ $( document ).ready(function() {
 		    if(node == selectedNode){
 		    	fillStyle = "green";
 	 	    }
-
+        if(node.fixed && node != selectedNode){
+          fillStyle = "blue";
+        }
 
 	 	    fontSize = 12;
 	 	    if(node.data.pad.links){
@@ -102,7 +105,9 @@ $( document ).ready(function() {
 	            if (node.data.color=='none') ctx.fillStyle = '#333333'
 	            ctx.fillText(node.data.label||"", pt.x, pt.y+4)
 	         // console.log(node.data);
-	        })    			
+	        })   
+
+	        removeIslands = false; 			
 	      },
       
       initMouseHandling:function(){
@@ -166,6 +171,31 @@ $( document ).ready(function() {
         	}
 			if(evt.charCode == 105){
 				removeIslands = true;
+			}  	
+      if(evt.charCode == 103 && selectedNode){
+        window.open(spaceurl + "/" + selectedNode.data.pad.padid);
+        removeIslands = true;
+      }         
+      if(evt.charCode == 117 ){
+        $.ajax({
+          url: "/?action=updatelist", 
+          success : function(data, status){
+            console.log("server updated");
+            console.log(data);
+            console.log(status);
+          },
+          error : function(jqXHR, status, message){
+            console.log("error ");
+            console.log(status);
+            console.log(message);
+          }
+        });
+      }         
+
+			if(evt.charCode == 102 && selectedNode){
+				console.log("freezing node" + selectedNode.fixed);
+				selectedNode.fixed = !selectedNode.fixed;
+				console.log(" node froze" + selectedNode.fixed);
 			}        	
 
 
@@ -215,9 +245,6 @@ node options:
   		url: "/?action=listpads",	
   		success : function(data, status){
   			$.each(data, function(index, pad){
-  				console.log("item");
-  				console.log(pad);
-  				console.log("adding item " + pad.title);
 
   				var node = createNode(pad);
 
@@ -329,7 +356,15 @@ node options:
 <canvas id="my_canvas" width="1200" height="800" />
 </div>
 	<div id="infodiv">
-		<div ="infotitle">
+		<div id="infotitle">
+		</div>
+		<div id="infocontent">
+			Hotkeys:<BR/>
+			g : Go to selected node's Pad<BR>
+			d : delete selected node from graph<BR>
+			f : (un)freeze selected node <BR>
+      i : remove any isolated nodes<BR>
+      u : tell server to update graph<BR>
 		</div>
 	</div>
 </div>
