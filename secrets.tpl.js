@@ -2,7 +2,9 @@ function secrets(){
 
 	var secrets = { 
 		hp_clientid : "",
-		hp_secret : ""
+		hp_secret : "",
+		port : "",
+		prod_port : ""
 	};
 
 	return secrets;
