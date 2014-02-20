@@ -21,14 +21,16 @@ $ = require("jquery")(jsdom.jsdom().createWindow());
 
 
 var secrets = require("./secrets").secrets();
+
+
 var site = "metmedialab";
 // hp_clientid and hp_secret
 
 var Hackpad = require("Hackpad");
 
-var port = 1337;
+var port = secrets.port;
 if(process && process.env && process.env.NODE_ENV == "production"){
-  port = 80;
+  port = secrets.prod_port;
 }
 // create some sample objects, put in couchdb
 
