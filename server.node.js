@@ -26,7 +26,7 @@ var secrets = require("./secrets").secrets();
 var site = secrets.hackpad_name;
 // hp_clientid and hp_secret
 
-var Hackpad = require("Hackpad");
+var Hackpad = require("hackpad");
 
 var port = secrets.port;
 if(process && process.env && process.env.NODE_ENV == "production"){
